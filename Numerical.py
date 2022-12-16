@@ -91,6 +91,25 @@ def CreateScatterPlots(df):
     ScatterPlot(df, "Log Gdp per hours human capital", "liphhc", "Alpha", "labsh", "countrycode")
     ScatterPlot(df, "Log Gdp per hours human capital", "liphhc", "Technology", "ctfp", "countrycode")
 
+def QuantileSuccessCalc(df, column, upperqant, lowerquant):
+    ykh = df[column].quantile(upperqant)/df[column].quantile(lowerquant)
+    y = df["lgdp"].quantile(upperqant)/df["lgdp"].quantile(lowerquant)
+    return ykh / y
+
+def CalculateSuccess(df):
+    gdpMeasures = ["lgdppc", "lipw", "liphw", "lipuhc", "liphhc", "ctfp"]
+    sucess = pd.DataFrame({"GDP measure" : gdpMeasures, "success1" : [0,0,0,0,0,0], "Success2(99-01)": [0,0,0,0,0,0], "Success2(95-05)": [0,0,0,0,0,0], "Success2(90-10)": [0,0,0,0,0,0], "Success2(75-25)": [0,0,0,0,0,0]})
+    
+    #fill empty sucess dataframe with success values
+    for index, row in sucess.iterrows():
+        sucess.at[index, "success1"] = df[row["GDP measure"]].var() / df["lgdp"].var()
+        sucess.at[index, "Success2(99-01)"] = QuantileSuccessCalc(df, row["GDP measure"], 0.99, 0.01)
+        sucess.at[index, "Success2(95-05)"] = QuantileSuccessCalc(df, row["GDP measure"], 0.95, 0.05)
+        sucess.at[index, "Success2(90-10)"] = QuantileSuccessCalc(df, row["GDP measure"], 0.90, 0.10)
+        sucess.at[index, "Success2(75-25)"] = QuantileSuccessCalc(df, row["GDP measure"], 0.75, 0.25)
+
+    print(sucess, "\n\n")
+   
 def main():
     #read in pwt100 table csv and convert to dataframe, drop any rows with NaN values
     df = pd.read_csv('https://raw.githubusercontent.com/jivizcaino/PWT_10.0/main/pwt100.csv', encoding="latin-1")
@@ -136,6 +155,8 @@ def main():
     df2017 = df2017.assign(lgdppc = lambda x: np.log(x['gdppc']))
     df2017 = df2017.assign(lgdp = lambda x: np.log(x['cgdpo']))
     
+    print("Success Measures: \n")
     CreateScatterPlots(df2017)
+    CalculateSuccess(df2017)
     
 main()
