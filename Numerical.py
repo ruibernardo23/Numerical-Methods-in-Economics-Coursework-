@@ -1,5 +1,6 @@
 import pandas as pd 
 import numpy as np
+import matplotlib.pyplot as plt
 
 #calculate income per worker, cgdpo/emp
 def IncomePerWorker(row):
@@ -49,6 +50,7 @@ def CalcDifferencRatioStats(df):
     
     return df_stats
 
+#creates a scatter plot for 2 variables of a given dataframe, assigns lables to points from 3rd variable
 def ScatterPlot(df, xLabel, xdata, ylable, ydata, pntLable):
     plt.scatter(df[xdata], df[ydata])
     plt.title(ylable + " vs " + xLabel)
@@ -59,7 +61,8 @@ def ScatterPlot(df, xLabel, xdata, ylable, ydata, pntLable):
         plt.annotate(label, (x, y))
 
     plt.show()
-    
+
+#creates the scatterplots for each gdp measure for a given dataframe
 def CreateScatterPlots(df):
     ScatterPlot(df, "Log Gdp per capita", "lgdppc", "Capital Stock", "cn", "countrycode")
     ScatterPlot(df, "Log Gdp per capita", "lgdppc", "Human Capital", "hc", "countrycode")
@@ -91,11 +94,13 @@ def CreateScatterPlots(df):
     ScatterPlot(df, "Log Gdp per hours human capital", "liphhc", "Alpha", "labsh", "countrycode")
     ScatterPlot(df, "Log Gdp per hours human capital", "liphhc", "Technology", "ctfp", "countrycode")
 
+#calculates and returns the success2 value of a given variable in a dataframe using the quantiles provided
 def QuantileSuccessCalc(df, column, upperqant, lowerquant):
     ykh = df[column].quantile(upperqant)/df[column].quantile(lowerquant)
     y = df["lgdp"].quantile(upperqant)/df["lgdp"].quantile(lowerquant)
     return ykh / y
 
+#calculates and prints a dataframe containing the measures of success for all gdp measures of a given dataframe
 def CalculateSuccess(df):
     gdpMeasures = ["lgdppc", "lipw", "liphw", "lipuhc", "liphhc", "ctfp"]
     sucess = pd.DataFrame({"GDP measure" : gdpMeasures, "success1" : [0,0,0,0,0,0], "Success2(99-01)": [0,0,0,0,0,0], "Success2(95-05)": [0,0,0,0,0,0], "Success2(90-10)": [0,0,0,0,0,0], "Success2(75-25)": [0,0,0,0,0,0]})
@@ -109,9 +114,10 @@ def CalculateSuccess(df):
         sucess.at[index, "Success2(75-25)"] = QuantileSuccessCalc(df, row["GDP measure"], 0.75, 0.25)
 
     print(sucess, "\n\n")
-   
+
 def main():
     #read in pwt100 table csv and convert to dataframe, drop any rows with NaN values
+    print("Loading Data...\n")
     df = pd.read_csv('https://raw.githubusercontent.com/jivizcaino/PWT_10.0/main/pwt100.csv', encoding="latin-1")
     #df = df.loc[:,["countrycode", "country", "year", "cgdpo", "emp", "avh", "hc", "pop", "cn", "labsh", "ctfp"]] #filter table to only variables needed before discarding NaN rows
     df = df.dropna() #discard rows with NaN value
@@ -131,12 +137,37 @@ def main():
     print("2017: \n")
     df2017 = df.loc[df["year"] == 2017] #create dataframe for just 2017
     print(df2017, "\n\n")
-    
+
     #create new columns for each of our gdp statistics
     df2017 = df2017.assign(ipw=df2017.apply(IncomePerWorker, axis=1),
                         iphw=df2017.apply(IncomePerHourWorked, axis=1),
                         ipuhc=df2017.apply(IncomePerUnitOfHumanCapital, axis=1),
                         iphhc=df2017.apply(IncomePerHourOfHumanCapital, axis=1))
+
+    #create a new dataframe with only the required statistics for easier calculation
+    df2017_income = df2017.loc[:, ["country", "ipw", "iphw", "ipuhc", "iphhc"]]
+    df2017_income.set_index("country", inplace=True)
+    
+    #generate descriptive statistics and store in new table, print outcome
+    df2017_income_stats = CalcDifferencRatioStats(df2017_income)
+    print("2017 Income: \n\n", df2017_income, "\n\n")
+    print("2017 Income Descriptive Statistics: \n\n", df2017_income_stats, "\n\n")
+
+    #create new columns for log variables needed for future calculations
+    df2017 = df2017.assign(lipw = lambda x: np.log(x['ipw']))
+    df2017 = df2017.assign(liphw = lambda x: np.log(x['iphw']))
+    df2017 = df2017.assign(lipuhc = lambda x: np.log(x['ipuhc']))
+    df2017 = df2017.assign(liphhc = lambda x: np.log(x['iphhc']))
+    df2017 = df2017.assign(gdppc = df2017["cgdpo"] / df2017["pop"])
+    df2017 = df2017.assign(lgdppc = lambda x: np.log(x['gdppc']))
+    df2017 = df2017.assign(lgdp = lambda x: np.log(x['cgdpo']))
+
+    #create and print scatterplots and success measures for 2017
+    print("Success Measures: \n")
+    CreateScatterPlots(df2017)
+    CalculateSuccess(df2017)
+
+    #scatterplots and successs tables for countries above and below median
     df2017_above_median = df2017.loc[df2017["cgdpo"] > df2017["cgdpo"].median()]
     df2017_below_median = df2017.loc[df2017["cgdpo"] < df2017["cgdpo"].median()]
     print("Success measures above median: \n")
@@ -146,7 +177,7 @@ def main():
     CreateScatterPlots(df2017_below_median)
     CalculateSuccess(df2017_below_median)
 
-
+    #scatterplots and successs tables for OECD countries and non-OECD countries
     oecd_countries = [ #list of OECD countries
         'Australia', 'Austria', 'Belgium', 'Canada', 'Chile', 'Czech Republic', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece', 'Hungary', 'Iceland', 'Ireland', 'Israel', 'Italy', 'Japan', 'South Korea', 'Latvia', 'Lithuania', 'Luxembourg', 'Mexico', 'Netherlands', 'New Zealand', 'Norway', 'Poland', 'Portugal', 'Slovakia', 'Slovenia', 'Spain', 'Sweden', 'Switzerland', 'Turkey', 'United Kingdom', 'United States']
     df2017_OECD = df2017.loc[df2017["country"].isin(oecd_countries)]
@@ -158,7 +189,7 @@ def main():
     CreateScatterPlots(df2017_notOECD)
     CalculateSuccess(df2017_notOECD)
 
-
+    #create dataframe with country and continent for use to seperate our sample
     countries = [ #Dictionary of countries and their continents
     {'timezones': ['Europe/Andorra'], 'code': 'AD', 'continent': 'Europe', 'name': 'Andorra', 'capital': 'Andorra la Vella'},
     {'timezones': ['Asia/Kabul'], 'code': 'AF', 'continent': 'Asia', 'name': 'Afghanistan', 'capital': 'Kabul'},
@@ -357,7 +388,7 @@ def main():
     countriesdf = pd.DataFrame(countries)
     countriesdf = countriesdf.loc[:, ["continent", "name"]]
 
-
+    #scatterplots and successs tables for countries by continent
     df2017_Africa = df2017.loc[df2017["country"].isin(countriesdf.loc[countriesdf["continent"] == "Africa"].loc[:,"name"])]
     df2017_Americas = df2017.loc[df2017["country"].isin(countriesdf.loc[countriesdf["continent"].isin(["North America", "South America"])].loc[:,"name"])]
     df2017_AsiaOcea = df2017.loc[df2017["country"].isin(countriesdf.loc[countriesdf["continent"].isin(["Asia", "Oceania"])].loc[:,"name"])]
@@ -374,26 +405,5 @@ def main():
     CalculateSuccess(df2017_AsiaOcea)
     print("Success Measures Europe: \n")
     CalculateSuccess(df2017_Europe)
-    #create a new dataframe with only the required statistics for easier calculation
-    df2017_income = df2017.loc[:, ["country", "ipw", "iphw", "ipuhc", "iphhc"]]
-    df2017_income.set_index("country", inplace=True)
-    
-    #generate descriptive statistics and store in new table, print outcome
-    df2017_income_stats = CalcDifferencRatioStats(df2017_income)
-    print("2017 Income: \n\n", df2017_income, "\n\n")
-    print("2017 Income Descriptive Statistics: \n\n", df2017_income_stats, "\n\n")
-    
-    df2017 = df2017.assign(lipw = lambda x: np.log(x['ipw']))
-    df2017 = df2017.assign(liphw = lambda x: np.log(x['iphw']))
-    df2017 = df2017.assign(lipuhc = lambda x: np.log(x['ipuhc']))
-    df2017 = df2017.assign(liphhc = lambda x: np.log(x['iphhc']))
-    df2017 = df2017.assign(gdppc = df2017["cgdpo"] / df2017["pop"])
-    df2017 = df2017.assign(lgdppc = lambda x: np.log(x['gdppc']))
-    df2017 = df2017.assign(lgdp = lambda x: np.log(x['cgdpo']))
-    
-    print("Success Measures: \n")
-    CreateScatterPlots(df2017)
-    CalculateSuccess(df2017)
-    
-    
+
 main()
