@@ -49,6 +49,48 @@ def CalcDifferencRatioStats(df):
     
     return df_stats
 
+def ScatterPlot(df, xLabel, xdata, ylable, ydata, pntLable):
+    plt.scatter(df[xdata], df[ydata])
+    plt.title(ylable + " vs " + xLabel)
+    plt.xlabel(xLabel)
+    plt.ylabel(ylable)
+
+    for x, y, label in zip(df[xdata], df[ydata], df[pntLable]):
+        plt.annotate(label, (x, y))
+
+    plt.show()
+    
+def CreateScatterPlots(df):
+    ScatterPlot(df, "Log Gdp per capita", "lgdppc", "Capital Stock", "cn", "countrycode")
+    ScatterPlot(df, "Log Gdp per capita", "lgdppc", "Human Capital", "hc", "countrycode")
+    ScatterPlot(df, "Log Gdp per capita", "lgdppc", "Average Human Capital", "avh", "countrycode")
+    ScatterPlot(df, "Log Gdp per capita", "lgdppc", "Alpha", "labsh", "countrycode")
+    ScatterPlot(df, "Log Gdp per capita", "lgdppc", "Technology", "ctfp", "countrycode")
+
+    ScatterPlot(df, "Log Gdp per worker", "lipw", "Capital Stock", "cn", "countrycode")
+    ScatterPlot(df, "Log Gdp per worker", "lipw", "Human Capital", "hc", "countrycode")
+    ScatterPlot(df, "Log Gdp per worker", "lipw", "Average Human Capital", "avh", "countrycode")
+    ScatterPlot(df, "Log Gdp per worker", "lipw", "Alpha", "labsh", "countrycode")
+    ScatterPlot(df, "Log Gdp per worker", "lipw", "Technology", "ctfp", "countrycode")
+
+    ScatterPlot(df, "Log Gdp per hours worked", "liphw", "Capital Stock", "cn", "countrycode")
+    ScatterPlot(df, "Log Gdp per hours worked", "liphw", "Human Capital", "hc", "countrycode")
+    ScatterPlot(df, "Log Gdp per hours worked", "liphw", "Average Human Capital", "avh", "countrycode")
+    ScatterPlot(df, "Log Gdp per hours worked", "liphw", "Alpha", "labsh", "countrycode")
+    ScatterPlot(df, "Log Gdp per hours worked", "liphw", "Technology", "ctfp", "countrycode")
+
+    ScatterPlot(df, "Log Gdp per unit human capital", "lipuhc", "Capital Stock", "cn", "countrycode")
+    ScatterPlot(df, "Log Gdp per unit human capital", "lipuhc", "Human Capital", "hc", "countrycode")
+    ScatterPlot(df, "Log Gdp per unit human capital", "lipuhc", "Average Human Capital", "avh", "countrycode")
+    ScatterPlot(df, "Log Gdp per unit human capital", "lipuhc", "Alpha", "labsh", "countrycode")
+    ScatterPlot(df, "Log Gdp per unit human capital", "lipuhc", "Technology", "ctfp", "countrycode")
+
+    ScatterPlot(df, "Log Gdp per hours human capital", "liphhc", "Capital Stock", "cn", "countrycode")
+    ScatterPlot(df, "Log Gdp per hours human capital", "liphhc", "Human Capital", "hc", "countrycode")
+    ScatterPlot(df, "Log Gdp per hours human capital", "liphhc", "Average Human Capital", "avh", "countrycode")
+    ScatterPlot(df, "Log Gdp per hours human capital", "liphhc", "Alpha", "labsh", "countrycode")
+    ScatterPlot(df, "Log Gdp per hours human capital", "liphhc", "Technology", "ctfp", "countrycode")
+
 def main():
     #read in pwt100 table csv and convert to dataframe, drop any rows with NaN values
     df = pd.read_csv('https://raw.githubusercontent.com/jivizcaino/PWT_10.0/main/pwt100.csv', encoding="latin-1")
@@ -85,5 +127,15 @@ def main():
     df2017_income_stats = CalcDifferencRatioStats(df2017_income)
     print("2017 Income: \n\n", df2017_income, "\n\n")
     print("2017 Income Descriptive Statistics: \n\n", df2017_income_stats, "\n\n")
+    
+    df2017 = df2017.assign(lipw = lambda x: np.log(x['ipw']))
+    df2017 = df2017.assign(liphw = lambda x: np.log(x['iphw']))
+    df2017 = df2017.assign(lipuhc = lambda x: np.log(x['ipuhc']))
+    df2017 = df2017.assign(liphhc = lambda x: np.log(x['iphhc']))
+    df2017 = df2017.assign(gdppc = df2017["cgdpo"] / df2017["pop"])
+    df2017 = df2017.assign(lgdppc = lambda x: np.log(x['gdppc']))
+    df2017 = df2017.assign(lgdp = lambda x: np.log(x['cgdpo']))
+    
+    CreateScatterPlots(df2017)
     
 main()
